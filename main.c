@@ -1,13 +1,14 @@
 #include "tm4c123gh6pm.h"
 
-/**
- * main.c
- */
-
+//**********Global Variables***************//
+float duty_cycle;
+volatile short int timer_flag;
 //**********Function Declarations**********//
 void init_PWM (void);
 void init_timers (void);
 void init_gpio(void);
+void change_intensity (void);
+void Timer0AOverflowISR (void);
 
 //**********main() function***********//
 int main(void)
@@ -15,12 +16,40 @@ int main(void)
     init_PWM();
     init_gpio();
     init_timers();
+
+    timer_flag = 0x00;
+    duty_cycle = 0.0;
 	while (1)
 	{
+	    change_intensity();
 	}
 }
 
 //**********Function Definitions**********//
+
+void change_intensity (void)
+{
+    if (timer_flag == 0x01)
+    {
+        if (duty_cycle != 100.0)
+        {
+            duty_cycle = duty_cycle  + 10.0;
+        }
+        else
+        {
+            duty_cycle = 0.0;
+        }
+        PWM1_2_CMPB_R = (PWM1_2_LOAD_R+1)*(1 - duty_cycle /100) - 1;
+        timer_flag = 0x00;
+    }
+}
+
+void Timer0AOverflowISR (void)                 //Interrupt subroutine function
+{
+    timer_flag = 0x01;
+    // Clear the interrupt flag
+    TIMER0_ICR_R |= 0x01;
+}
 
 //Initialize PWM Generator 2 (M1PWM5) with 1-kHz frequency, a 10% duty cycle for M1PWM5 to control the RED LED
 // Assume the system clock to be 16 MHz
@@ -81,8 +110,6 @@ void init_gpio(void)
             //Lock SW2
     GPIO_PORTF_CR_R &= ~0x1;                // Re-commit GPIO in PF[0]
     GPIO_PORTF_LOCK_R |= 0x1;               // Lock the GPIOCR register to prevent further modification
-
-    GPIO_PORTF_DATA_R |= 0x02;
 }
 
 
