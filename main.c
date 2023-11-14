@@ -7,9 +7,12 @@ volatile short int timer_flag;
 void init_PWM (void);
 void init_timers (void);
 void init_gpio(void);
-void change_intensity (void);
+void change_dutycycle (void);
 void Timer0AOverflowISR (void);
+void delay_ms (int ms);
+void rotate360 (void);
 
+//void rotate360 (void);
 //**********main() function***********//
 int main(void)
 {
@@ -19,15 +22,15 @@ int main(void)
 
     timer_flag = 0x00;
     duty_cycle = 0.0;
-	while (1)
-	{
-	    change_intensity();
-	}
+    while (1)
+    {
+        change_dutycycle();
+    }
 }
 
 //**********Function Definitions**********//
 
-void change_intensity (void)
+void change_dutycycle (void)
 {
     if (timer_flag == 0x01)
     {
@@ -42,6 +45,18 @@ void change_intensity (void)
         PWM1_2_CMPB_R = (PWM1_2_LOAD_R+1)*(1 - duty_cycle /100) - 1;
         timer_flag = 0x00;
     }
+    rotate360();
+}
+
+void rotate360 (void)
+{
+    int i;
+    int CW[] = {0b0011, 0b1001, 0b1100, 0b0110};
+    for(i = 0; i < 200; i++)
+    {
+        GPIO_PORTD_DATA_R = CW[i%4];
+    }
+    GPIO_PORTD_DATA_R &= ~0x0F;
 }
 
 void Timer0AOverflowISR (void)                 //Interrupt subroutine function
@@ -91,7 +106,7 @@ void init_PWM (void)
 void init_gpio(void)
 {
     volatile unsigned long delay_clk;
-    SYSCTL_RCGC2_R |= 0x00000020;
+    SYSCTL_RCGC2_R |= 0x0000002A;
     delay_clk = SYSCTL_RCGC2_R;
 
     GPIO_PORTF_PCTL_R |= 0x50;
@@ -112,9 +127,14 @@ void init_gpio(void)
     GPIO_PORTF_LOCK_R |= 0x1;               // Lock the GPIOCR register to prevent further modification
 
     // Set Port D to control the stepper motor
-    GPIO_PORTD_DIR_R |= 0x0F;
-    GPIO_PORTD_AFSEL_R &= ~0x0F;
-    GPIO_PORTD_DEN_R |= 0x0F;
+    GPIO_PORTD_DEN_R |= 0x0F;               //Enable pins 0-3 in Port D
+    GPIO_PORTD_DIR_R |= 0x0F;               // Set PD0-3 as outputs
+    GPIO_PORTD_AFSEL_R &= ~0x0F;            // Disable alternate functions for Pins 0-3 in Port D
+
+    // Set Port B, PB6-7
+    GPIO_PORTB_DIR_R &= ~0xC0;               // Set PB6-7 as inputs
+    GPIO_PORTD_AFSEL_R &= ~0xC0;            // Disable alternate functions for Pins 6, 7 in Port B
+    GPIO_PORTD_DEN_R |= 0xC0;               //Enable pins 6-7 in Port B
 }
 
 
@@ -147,3 +167,12 @@ void init_timers (void)
     TIMER1_CTL_R |= 0x01;
 }
 
+void delay_ms (int ms)
+{
+    int i, j;
+    for (i = 0; i < ms; i++)
+    {
+        for(j=0; j < 3180; j++)
+        {}
+    }
+}
