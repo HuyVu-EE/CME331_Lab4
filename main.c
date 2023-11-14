@@ -110,6 +110,11 @@ void init_gpio(void)
             //Lock SW2
     GPIO_PORTF_CR_R &= ~0x1;                // Re-commit GPIO in PF[0]
     GPIO_PORTF_LOCK_R |= 0x1;               // Lock the GPIOCR register to prevent further modification
+
+    // Set Port D to control the stepper motor
+    GPIO_PORTD_DIR_R |= 0x0F;
+    GPIO_PORTD_AFSEL_R &= ~0x0F;
+    GPIO_PORTD_DEN_R |= 0x0F;
 }
 
 
